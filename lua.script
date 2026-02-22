@@ -1,0 +1,45 @@
+-- Create GUI
+local player = game.Players.LocalPlayer
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "AutoFarmGui"
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 200, 0, 100)
+frame.Position = UDim2.new(0.5, -100, 0.5, -50)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+frame.Parent = screenGui
+
+local button = Instance.new("TextButton")
+button.Size = UDim2.new(1, 0, 1, 0)
+button.Text = "Auto Farm: OFF"
+button.TextColor3 = Color3.new(1, 1, 1)
+button.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+button.Parent = frame
+
+-- Auto Farm system
+local autoFarmEnabled = false
+
+button.MouseButton1Click:Connect(function()
+	autoFarmEnabled = not autoFarmEnabled
+	
+	if autoFarmEnabled then
+		button.Text = "Auto Farm: ON"
+	else
+		button.Text = "Auto Farm: OFF"
+	end
+end)
+
+-- Coin farming loop
+while true do
+	task.wait(1)
+	
+	if autoFarmEnabled and player.Character then
+		for _, object in pairs(workspace:GetChildren()) do
+			if object.Name == "Coin" and object:IsA("Part") then
+				player.Character:MoveTo(object.Position)
+			end
+		end
+	end
+end
