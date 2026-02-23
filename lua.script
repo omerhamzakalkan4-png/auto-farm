@@ -1,3 +1,4 @@
+-- MM2 ULTRA FAST FARM (GOD MODE PICKUP) - ENGLISH
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -5,16 +6,15 @@ local LocalPlayer = Players.LocalPlayer
 
 -- UI LIBRARY
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
-local Window = Library.CreateLib("MM2 DELTA FIXED", "DarkTheme")
+local Window = Library.CreateLib("MM2 DELTA ULTRA", "DarkTheme")
 local MainTab = Window:NewTab("Main Menu")
 local Section = MainTab:NewSection("Auto Farm")
 
 _G.AutoFarm = false
 _G.Noclip = false
 local FarmSpeed = 30 
--- ADJUSTED TO -3.5 TO FIX PICKUP ISSUE (Still underground)
-local VerticalOffset = -3.5 
-local MaxFarmDistance = 250 
+local VerticalOffset = -4 -- Locked at -4 as you saw
+local MaxFarmDistance = 300 
 
 -- DELTA STABLE NOCLIP
 RunService.Stepped:Connect(function()
@@ -35,9 +35,7 @@ local function ManagePhysics(state)
     local character = LocalPlayer.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
     local humanoid = character and character:FindFirstChild("Humanoid")
-    
     if not root or not humanoid then return end
-    
     if state then
         local bv = root:FindFirstChild("FarmVelocity") or Instance.new("BodyVelocity")
         bv.Name = "FarmVelocity"
@@ -51,20 +49,25 @@ local function ManagePhysics(state)
     end
 end
 
--- BETTER COIN FINDER
+-- ADVANCED COIN GRABBER (THE SECRET)
 local function GetNearestCoin()
     local Root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not Root then return nil end
-    
     local TargetCoin = nil
     local MinDist = MaxFarmDistance
     
     for _, v in pairs(workspace:GetDescendants()) do
         if v.Name == "CoinVisual" or v.Name == "Crate" or v.Name == "Coin" then
             local CoinPart = v:IsA("BasePart") and v or v:FindFirstChildWhichIsA("BasePart")
-            if CoinPart and CoinPart.Transparency < 1 then -- Only get visible coins
+            if CoinPart and CoinPart.Transparency < 1 then
                 local Dist = (Root.Position - CoinPart.Position).Magnitude
                 if Dist < MinDist then
+                    -- THE FIX: FireTouchInterest
+                    -- This simulates a touch even if you are 4 units below!
+                    if firetouchinterest then
+                        firetouchinterest(Root, CoinPart, 0)
+                        firetouchinterest(Root, CoinPart, 1)
+                    end
                     MinDist = Dist
                     TargetCoin = CoinPart
                 end
@@ -88,7 +91,7 @@ local function MoveTo(targetCFrame)
 end
 
 -- UI TOGGLES
-Section:NewToggle("Enable Auto-Farm", "Farms under the ground (Fixed Pickup)", function(state)
+Section:NewToggle("Enable Auto-Farm", "Farms at -4 with FireTouchInterest", function(state)
     _G.AutoFarm = state
     _G.Noclip = state
     ManagePhysics(state)
@@ -98,31 +101,19 @@ Section:NewToggle("Enable Auto-Farm", "Farms under the ground (Fixed Pickup)", f
             local coin = GetNearestCoin()
             if coin and _G.AutoFarm then
                 local move = MoveTo(coin.CFrame)
-                if move then 
-                    move.Completed:Wait()
-                    -- EXTRA WAIT TO ENSURE PICKUP
-                    task.wait(0.15) 
-                end
-            else
-                task.wait(0.5) 
+                if move then move.Completed:Wait() end
             end
+            task.wait(0.05) 
         end
     end)
 end)
 
-Section:NewSlider("Farm Speed", "Default: 30", 30, 5, function(s)
+Section:NewSlider("Farm Speed", "Max 50", 50, 5, function(s)
     FarmSpeed = s
 end)
 
--- ANTI-AFK
-local Section2 = MainTab:NewSection("Utility")
-Section2:NewButton("Enable Anti-AFK", "Prevents disconnect", function()
-    local vu = game:GetService("VirtualUser")
-    LocalPlayer.Idled:Connect(function()
-        vu:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-        task.wait(1)
-        vu:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-    end)
+Section:NewSlider("Custom Depth", "Current: -4", 7, 2, function(s)
+    VerticalOffset = -s
 end)
 
-print("MM2 DELTA PICKUP FIX LOADED")
+print("MM2 ULTRA: FIRETOUCHINTEREST ACTIVATED")
