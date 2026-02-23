@@ -1,4 +1,4 @@
--- MM2 ULTRA FAST FARM (GOD MODE PICKUP) - ENGLISH
+-- MM2 ULTRA FAST FARM (SCANNER FIXED) - ENGLISH
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -6,68 +6,33 @@ local LocalPlayer = Players.LocalPlayer
 
 -- UI LIBRARY
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
-local Window = Library.CreateLib("MM2 DELTA ULTRA", "DarkTheme")
-local MainTab = Window:NewTab("Main Menu")
+local Window = Library.CreateLib("MM2 FIX", "DarkTheme")
+local MainTab = Window:NewTab("Main")
 local Section = MainTab:NewSection("Auto Farm")
 
 _G.AutoFarm = false
 _G.Noclip = false
 local FarmSpeed = 30 
-local VerticalOffset = -4 -- Locked at -4 as you saw
-local MaxFarmDistance = 300 
+local VerticalOffset = -4 
 
--- DELTA STABLE NOCLIP
-RunService.Stepped:Connect(function()
-    if _G.Noclip and LocalPlayer.Character then
-        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") and part.CanCollide then
-                part.CanCollide = false
-            end
-        end
-        if LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-            LocalPlayer.Character.HumanoidRootPart.Velocity = Vector3.new(0, 0, 0)
-        end
-    end
-end)
-
--- PHYSICS FREEZE
-local function ManagePhysics(state)
-    local character = LocalPlayer.Character
-    local root = character and character:FindFirstChild("HumanoidRootPart")
-    local humanoid = character and character:FindFirstChild("Humanoid")
-    if not root or not humanoid then return end
-    if state then
-        local bv = root:FindFirstChild("FarmVelocity") or Instance.new("BodyVelocity")
-        bv.Name = "FarmVelocity"
-        bv.Velocity = Vector3.new(0, 0, 0)
-        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-        bv.Parent = root
-        humanoid.PlatformStand = true
-    else
-        if root:FindFirstChild("FarmVelocity") then root.FarmVelocity:Destroy() end
-        humanoid.PlatformStand = false
-    end
-end
-
--- ADVANCED COIN GRABBER (THE SECRET)
+-- FULL MAP SCANNER (Altınları bulmayı garanti eder)
 local function GetNearestCoin()
     local Root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not Root then return nil end
-    local TargetCoin = nil
-    local MinDist = MaxFarmDistance
     
+    local TargetCoin = nil
+    local MinDist = 500 -- Mesafe sınırı 500'e çıkarıldı
+    
+    -- Haritadaki her şeyi tara
     for _, v in pairs(workspace:GetDescendants()) do
-        if v.Name == "CoinVisual" or v.Name == "Crate" or v.Name == "Coin" then
+        -- MM2'deki tüm olası para isimleri
+        if v.Name == "CoinVisual" or v.Name == "Crate" or v.Name == "Coin" or v.Name == "Snowball" then
             local CoinPart = v:IsA("BasePart") and v or v:FindFirstChildWhichIsA("BasePart")
+            
+            -- Para varsa ve henüz toplanmamışsa (görünürse)
             if CoinPart and CoinPart.Transparency < 1 then
                 local Dist = (Root.Position - CoinPart.Position).Magnitude
                 if Dist < MinDist then
-                    -- THE FIX: FireTouchInterest
-                    -- This simulates a touch even if you are 4 units below!
-                    if firetouchinterest then
-                        firetouchinterest(Root, CoinPart, 0)
-                        firetouchinterest(Root, CoinPart, 1)
-                    end
                     MinDist = Dist
                     TargetCoin = CoinPart
                 end
@@ -77,7 +42,6 @@ local function GetNearestCoin()
     return TargetCoin
 end
 
--- MOVEMENT ENGINE
 local function MoveTo(targetCFrame)
     local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if root then
@@ -90,30 +54,35 @@ local function MoveTo(targetCFrame)
     end
 end
 
--- UI TOGGLES
-Section:NewToggle("Enable Auto-Farm", "Farms at -4 with FireTouchInterest", function(state)
+-- NOCLIP & PHYSICS
+RunService.Stepped:Connect(function()
+    if _G.Noclip and LocalPlayer.Character then
+        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
+        end
+        LocalPlayer.Character.HumanoidRootPart.Velocity = Vector3.new(0,0,0)
+    end
+end)
+
+Section:NewToggle("Start Farm", "Goes to coins now", function(state)
     _G.AutoFarm = state
     _G.Noclip = state
-    ManagePhysics(state)
     
     task.spawn(function()
         while _G.AutoFarm do
             local coin = GetNearestCoin()
-            if coin and _G.AutoFarm then
+            if coin then
                 local move = MoveTo(coin.CFrame)
                 if move then move.Completed:Wait() end
+                -- Dokunma garantisi (firetouchinterest)
+                if firetouchinterest and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                    firetouchinterest(LocalPlayer.Character.HumanoidRootPart, coin, 0)
+                    firetouchinterest(LocalPlayer.Character.HumanoidRootPart, coin, 1)
+                end
             end
-            task.wait(0.05) 
+            task.wait(0.1)
         end
     end)
 end)
 
-Section:NewSlider("Farm Speed", "Max 50", 50, 5, function(s)
-    FarmSpeed = s
-end)
-
-Section:NewSlider("Custom Depth", "Current: -4", 7, 2, function(s)
-    VerticalOffset = -s
-end)
-
-print("MM2 ULTRA: FIRETOUCHINTEREST ACTIVATED")
+print("MM2 SCANNER FIXED - READY")
