@@ -14,7 +14,7 @@ _G.AutoFarm = false
 _G.Noclip = false
 local FarmSpeed = 30 
 -- SET TO -4 AS REQUESTED: Character stays 4 units below the coin.
-local VerticalOffset = -4 
+local VerticalOffset = -3 
 local MaxFarmDistance = 150 
 
 -- ANTI-FALL & NOCLIP ENGINE
