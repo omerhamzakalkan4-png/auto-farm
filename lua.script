@@ -1,4 +1,3 @@
--- MM2 ULTRA FAST FARM (OFFSET: -4) - ENGLISH VERSION
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -6,31 +5,32 @@ local LocalPlayer = Players.LocalPlayer
 
 -- UI LIBRARY
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
-local Window = Library.CreateLib("MM2 FIXED FARM", "DarkTheme")
+local Window = Library.CreateLib("MM2 DELTA FIXED", "DarkTheme")
 local MainTab = Window:NewTab("Main Menu")
-local Section = MainTab:NewSection("Auto Farm Settings")
+local Section = MainTab:NewSection("Auto Farm")
 
 _G.AutoFarm = false
 _G.Noclip = false
 local FarmSpeed = 30 
--- SET TO -4 AS REQUESTED: Character stays 4 units below the coin.
-local VerticalOffset = -3 
-local MaxFarmDistance = 150 
+-- ADJUSTED TO -3.5 TO FIX PICKUP ISSUE (Still underground)
+local VerticalOffset = -3.5 
+local MaxFarmDistance = 250 
 
--- ANTI-FALL & NOCLIP ENGINE
+-- DELTA STABLE NOCLIP
 RunService.Stepped:Connect(function()
-    if _G.Noclip and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+    if _G.Noclip and LocalPlayer.Character then
         for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
-            if part:IsA("BasePart") then
+            if part:IsA("BasePart") and part.CanCollide then
                 part.CanCollide = false
             end
         end
-        -- Lock velocity to 0 to prevent gravity issues
-        LocalPlayer.Character.HumanoidRootPart.Velocity = Vector3.new(0, 0, 0)
+        if LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            LocalPlayer.Character.HumanoidRootPart.Velocity = Vector3.new(0, 0, 0)
+        end
     end
 end)
 
--- PHYSICS FREEZE (Prevents falling through map)
+-- PHYSICS FREEZE
 local function ManagePhysics(state)
     local character = LocalPlayer.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -44,8 +44,6 @@ local function ManagePhysics(state)
         bv.Velocity = Vector3.new(0, 0, 0)
         bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
         bv.Parent = root
-        
-        -- Stops the character from trying to stand/fall
         humanoid.PlatformStand = true
     else
         if root:FindFirstChild("FarmVelocity") then root.FarmVelocity:Destroy() end
@@ -53,61 +51,57 @@ local function ManagePhysics(state)
     end
 end
 
--- NEAREST COIN FINDER
+-- BETTER COIN FINDER
 local function GetNearestCoin()
-    local Character = LocalPlayer.Character
-    local Root = Character and Character:FindFirstChild("HumanoidRootPart")
+    local Root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not Root then return nil end
     
-    local Coins = workspace:FindFirstChild("CoinContainer", true)
-    local Closest, MinDist = nil, MaxFarmDistance 
+    local TargetCoin = nil
+    local MinDist = MaxFarmDistance
     
-    if Coins then
-        for _, v in pairs(Coins:GetChildren()) do
-            if v:IsA("BasePart") then
-                local Dist = (Root.Position - v.Position).Magnitude
+    for _, v in pairs(workspace:GetDescendants()) do
+        if v.Name == "CoinVisual" or v.Name == "Crate" or v.Name == "Coin" then
+            local CoinPart = v:IsA("BasePart") and v or v:FindFirstChildWhichIsA("BasePart")
+            if CoinPart and CoinPart.Transparency < 1 then -- Only get visible coins
+                local Dist = (Root.Position - CoinPart.Position).Magnitude
                 if Dist < MinDist then
                     MinDist = Dist
-                    Closest = v
+                    TargetCoin = CoinPart
                 end
             end
         end
     end
-    return Closest
+    return TargetCoin
 end
 
 -- MOVEMENT ENGINE
 local function MoveTo(targetCFrame)
-    local character = LocalPlayer.Character
-    if character and character:FindFirstChild("HumanoidRootPart") then
-        local part = character.HumanoidRootPart
-        -- Applying the -4 offset here
-        local offsetCFrame = targetCFrame * CFrame.new(0, VerticalOffset, 0)
-        local distance = (part.Position - offsetCFrame.p).Magnitude
-        
+    local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if root then
+        local targetPos = targetCFrame * CFrame.new(0, VerticalOffset, 0)
+        local distance = (root.Position - targetPos.p).Magnitude
         local info = TweenInfo.new(distance / FarmSpeed, Enum.EasingStyle.Linear)
-        local tween = TweenService:Create(part, info, {CFrame = offsetCFrame})
+        local tween = TweenService:Create(root, info, {CFrame = targetPos})
         tween:Play()
         return tween
     end
 end
 
--- UI TOGGLE
-Section:NewToggle("Enable Auto-Farm", "Fast Collect + Under-Ground Mode", function(state)
+-- UI TOGGLES
+Section:NewToggle("Enable Auto-Farm", "Farms under the ground (Fixed Pickup)", function(state)
     _G.AutoFarm = state
     _G.Noclip = state
     ManagePhysics(state)
     
     task.spawn(function()
         while _G.AutoFarm do
-            task.wait(0.01)
-            local nearest = GetNearestCoin()
-            
-            if nearest and _G.AutoFarm then
-                local move = MoveTo(nearest.CFrame)
-                if move then
-                    move.Completed:Wait() 
-                    task.wait(0.02) 
+            local coin = GetNearestCoin()
+            if coin and _G.AutoFarm then
+                local move = MoveTo(coin.CFrame)
+                if move then 
+                    move.Completed:Wait()
+                    -- EXTRA WAIT TO ENSURE PICKUP
+                    task.wait(0.15) 
                 end
             else
                 task.wait(0.5) 
@@ -116,20 +110,19 @@ Section:NewToggle("Enable Auto-Farm", "Fast Collect + Under-Ground Mode", functi
     end)
 end)
 
-Section:NewSlider("Farm Speed", "Max recommended: 30", 30, 5, function(s)
+Section:NewSlider("Farm Speed", "Default: 30", 30, 5, function(s)
     FarmSpeed = s
 end)
 
--- UTILITY
+-- ANTI-AFK
 local Section2 = MainTab:NewSection("Utility")
-Section2:NewButton("Enable Anti-AFK", "Prevents idle kick", function()
+Section2:NewButton("Enable Anti-AFK", "Prevents disconnect", function()
     local vu = game:GetService("VirtualUser")
     LocalPlayer.Idled:Connect(function()
         vu:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
         task.wait(1)
         vu:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
     end)
-    print("Anti-AFK Activated")
 end)
 
-print("MM2 SCRIPT LOADED: ENGLISH VERSION (OFFSET -4)")
+print("MM2 DELTA PICKUP FIX LOADED")
